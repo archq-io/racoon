@@ -1,0 +1,4 @@
+# Strictly defined dependencies (and version locking)
+requests==2.31.0
+PyYAML==6.0.1
+rich==13.7.0

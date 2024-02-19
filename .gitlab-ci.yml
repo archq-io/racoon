@@ -1,0 +1,88 @@
+stages:
+  - test
+  - package
+  - publish
+  - release
+  - security test
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  SAST_EXCLUDED_PATHS: "spec, test, tests, tmp, venv"
+
+cache:
+  paths:
+    - ".cache/pip"
+    - venv/
+
+.job_template: &system_image_setup
+  image: python:3.10.5-bullseye
+
+.job_template: &environment_setup_debian
+  before_script:
+    - python -V # Show the Python version
+    - pip install virtualenv
+    - apt-get update
+    - apt-get -y install npm # Install NPM
+    - virtualenv venv
+    - source venv/bin/activate
+    - ls -lah # Show the directory content
+
+test:
+  stage: test
+  needs: []
+  <<: *system_image_setup
+  <<: *environment_setup_debian
+  script:
+    - make init
+    - make test ENV=py310,flake8
+
+package:
+  stage: package
+  needs: []
+  <<: *system_image_setup
+  <<: *environment_setup_debian
+  script:
+    - make init
+    - make package ENV=py310,flake8
+  artifacts:
+    paths: ['dist/*', 'release/*']
+    expire_in: '4 weeks'
+
+publish:
+  stage: publish
+  needs: ["package"]
+  <<: *system_image_setup
+  <<: *environment_setup_debian
+  script:
+    - pip install twine
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  rules:
+    - if: $CI_COMMIT_TAG
+  dependencies:
+    - package
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: ["package"]
+  script:
+    - echo "Creating a release for tag $CI_COMMIT_TAG"
+  rules:
+    - if: $CI_COMMIT_TAG
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: 'Release $CI_COMMIT_TAG'
+    description: './release/release-template.md'
+  dependencies:
+    - package
+
+sast:
+  stage: security test
+  needs: []
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths: [gl-sast-report.json]
+    expire_in: '4 weeks'
+include:
+  - template: Security/SAST.gitlab-ci.yml

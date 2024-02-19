@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "racoon"
+description = "🦝 Racoon"
+dynamic = ["version"]
+readme = "README.md"
+license = {file = "COPYING"}
+dependencies = [
+  "requests>=2.31.0",
+  "PyYAML>=6.0.1",
+  "rich>=13.7.0",
+]
+requires-python = ">=3.8"
+authors = [
+  {name = "Luka Kovacic", email = "luka.kovacic@archq.io"},
+]
+maintainers = [
+  {name = "Luka Kovacic", email = "luka.kovacic@archq.io"},
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "racoon.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests", "docs"]
+
+[project.urls]
+Repository = "https://github.com/archq-io/racoon"
+
+[project.scripts]
+racoon = "racoon.__main__:main"
+rget = "racoon.__main__:main"
